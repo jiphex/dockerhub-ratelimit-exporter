@@ -13,7 +13,7 @@ test:
   stage: test
   image: golang:1.16-alpine
   script:
-    - apk -U add make
+    - apk -U add build-base
     - make coverage
   artifacts:
     paths:
