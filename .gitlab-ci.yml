@@ -1,0 +1,28 @@
+include:
+  - project: "dafni/tools/common-ci-process"
+    ref: "master"
+    file: "docker-build-template.yml"
+
+stages:
+  - test
+  - quality
+  - docker_build
+  - deploy
+
+test:
+  stage: test
+  image: golang:1.16-alpine
+  script:
+    - make coverage
+  artifacts:
+    paths:
+      - cover.out
+
+# Override some defaults
+docker_build:
+  stage: docker_build
+  needs: ["test"]
+  variables:
+    # This needs to be here for performance reasons
+    BUILD_ARGS: --build-arg CI_COMMIT_TAG=$CI_COMMIT_TAG --build-arg CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME --build-arg CI_SHORT_SHA=$CI_SHORT_SHA
+    SNAPSHOT: single
