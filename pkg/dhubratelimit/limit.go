@@ -35,17 +35,21 @@ func WithCredentials(username, password string) Option {
 	}
 }
 
-// func (rlc *Checker) FindExternalIP() Option {
-// 	return func(r *Checker) error {
-// 		// As of 2021-01-26, Docker Hub has no AAAA record
-// 		iczip, err := rlc.ipsrc(extip.IPv4)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		r.unauthip = iczip
-// 		return nil
-// 	}
-// }
+func WithIPSource(label string) Option {
+	return func(r *Checker) error {
+		switch label {
+		case "ipify":
+			r.ipsrc = extip.IPify
+		case "myipio":
+			r.ipsrc = extip.MyIPIO
+		case "icanhazip":
+			fallthrough
+		default:
+			r.ipsrc = extip.ICanHazIP
+		}
+		return nil
+	}
+}
 
 func (rlc *Checker) IPAddress(family extip.AddressFamily) net.IP {
 	if rlc.cacheip != nil {
@@ -74,7 +78,7 @@ func (rlc *Checker) IdentityString() string {
 		if rlc.HasCredentials() {
 			return fmt.Sprintf("auth:%s", rlc.username)
 		} else {
-			return fmt.Sprintf("unauth:%s", rlc.IPAddress(extip.Auto).String())
+			return fmt.Sprintf("unauth:%s", rlc.IPAddress(extip.IPv4).String())
 		}
 	}
 }
@@ -151,7 +155,7 @@ func (rlc *Checker) Check(ctx context.Context) (lim Result, err error) {
 	} else {
 		return &UnauthResult{
 			InnerResult: res,
-			ipAddress:   rlc.IPAddress(extip.Auto),
+			ipAddress:   rlc.IPAddress(extip.IPv4),
 		}, nil
 	}
 }
@@ -169,8 +173,8 @@ func NewChecker(opts ...Option) (*Checker, error) {
 	}
 	// If we don't have any credentials then we fallback to filling out unauthIP
 	if !rlc.HasIdentity() {
-		// rlc.ipsrc = extip.ICanHazIP
-		rlc.ipsrc = extip.IPify
+		rlc.ipsrc = extip.ICanHazIP
+		// rlc.ipsrc = extip.IPify
 	}
 	return rlc, nil
 }

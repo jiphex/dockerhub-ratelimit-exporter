@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -30,7 +31,7 @@ const (
 )
 
 //go:embed static/*
-var static embed.FS
+var httpfiles embed.FS
 
 var (
 	metricLimit = promauto.NewGaugeVec(prometheus.GaugeOpts{
@@ -104,7 +105,10 @@ func (lm *logMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func runHTTPExporter(cc *cli.Context) error {
-	hub, err := dhrl.NewChecker(dhrl.WithCredentials(cc.String(flagUsername), getPasswordFromFlagOrStdin(cc)))
+	hub, err := dhrl.NewChecker(
+		dhrl.WithCredentials(cc.String(flagUsername), getPasswordFromFlagOrStdin(cc)),
+		dhrl.WithIPSource(cc.String(flagExtipProvider)),
+	)
 	if err != nil {
 		return err
 	}
@@ -144,7 +148,8 @@ func runHTTPExporter(cc *cli.Context) error {
 		rw.Write(jb)
 	}).Methods(http.MethodGet)
 	hroot.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
-	hroot.Handle("/", http.FileServer(http.FS(static))).Methods(http.MethodGet)
+	sdir, _ := fs.Sub(httpfiles, "static")
+	hroot.PathPrefix("/").Methods(http.MethodGet).Handler(http.FileServer(http.FS(sdir)))
 	laddr := cc.String(flagListenAddr)
 	log.WithField("listen-addr", laddr).Info("about to listen for HTTP")
 	return http.ListenAndServe(laddr, hroot)

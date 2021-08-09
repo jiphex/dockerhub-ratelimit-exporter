@@ -75,17 +75,16 @@ func (ur *UnauthResult) MarshalJSON() ([]byte, error) {
 		Family    string `json:"ip_family"`
 	}
 	fam := "unknown"
-	if len(ur.ipAddress) == 4 {
+	if len(ur.ipAddress) == 16 {
 		fam = "inet"
-	} else if len(ur.ipAddress) == 16 {
+	} else if len(ur.ipAddress) == 128 {
 		fam = "inet6"
 	}
-	x := out{
+	return json.Marshal(out{
 		InnerResult: ur.InnerResult,
 		IPAddress:   ur.ipAddress.String(),
 		Family:      fam,
-	}
-	return json.Marshal(x)
+	})
 }
 
 func (ur *UnauthResult) GetIdentity() string {
